@@ -7,7 +7,7 @@ chai.use(dirtyChai)
 
 const readdirtree = require('../index.js')
 
-const fixtures = `${__dirname}/fixture`
+const fixtures = `${__dirname}/../../test-fixture`
 
 describe('directory reading tests', () => {
   it('one level deep', (done) => {
