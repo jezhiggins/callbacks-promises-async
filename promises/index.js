@@ -44,4 +44,13 @@ function checkPaths (rootPath, paths, index, prefix, found, callback) {
   })
 } // checkPaths
 
-module.exports = readdirtree
+module.exports = (root) => {
+  return new Promise((resolve, reject) => {
+    readdirtree(root, (err, files) => {
+      if (err) {
+        return reject(err)
+      }
+      resolve(files)
+    })
+  })
+}
