@@ -1,0 +1,15 @@
+{
+  "name": "refactoring-to-promises",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "standard && mocha"
+  },
+  "author": "Jez Higgins",
+  "license": "ISC",
+  "devDependencies": {
+    "mocha": "^5.0.0",
+    "standard": "^10.0.3"
+  }
+}
