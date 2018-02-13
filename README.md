@@ -234,6 +234,12 @@ programming technique and almost ubiquitous in Lisp-like languages. (We could di
 this point into a sidebar discussion about whether JavaScript is Lisp-like, but 
 let's park that.)
 
+In JavaScript it's not uncommon to see tail-recursion lightly disguised by use of 
+helper libraries like [`async.eachSeries`](https://caolan.github.io/async/docs.html#eachSeries),
+but it's still there and still requires a bit of thinking about. (If you're feeling 
+keen, refactor this example to use `async.eachSeries` and see if feel it feels much more
+straightforward.)
+
 Ok, back to the code.  We've handled the simple case of a file.  Now, let's consider
 what we need to do if we find a directory?  We need to step down into it, and we
 have a function for that, `walktree`, to which we'll provide a local callback to
