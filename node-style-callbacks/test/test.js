@@ -9,7 +9,7 @@ const readdirtree = require('../index.js')
 
 const fixtures = `${__dirname}/../../test-fixture`
 
-describe('directory reading tests', () => {
+describe('node-style callbacks', () => {
   it('one level deep', (done) => {
     readdirtree(`${fixtures}/one-level`, (err, files) => {
       expect(err).to.be.null()

@@ -10,7 +10,7 @@ const readdirtree = require('../index.js')
 
 const fixtures = `${__dirname}/../../test-fixture`
 
-describe('directory reading tests', () => {
+describe('using promises in implementation', () => {
   it('one level deep', (done) => {
     readdirtree(`${fixtures}/one-level`)
       .then(files => {
