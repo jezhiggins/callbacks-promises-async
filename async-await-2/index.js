@@ -14,25 +14,22 @@ async function walktree (root, prefix) {
 } // walktree
 
 async function checkPaths (rootPath, paths, prefix) {
-  const checks = paths.map(async path => {
+  const files = []
+
+  for (const path of paths) {
     const fullPath = `${rootPath}/${path}`
     const localPath = `${prefix}${path}`
 
     const stats = await stat(fullPath)
     if (stats.isFile()) {
-      return localPath
+      files.push(localPath)
     }
     if (stats.isDirectory()) {
-      return walktree(fullPath, `${localPath}/`)
+      files.push(...await walktree(fullPath, `${localPath}/`))
     }
-  })
+  }
 
-  const files = await Promise.all(checks)
-  return flattenArray(files)
+  return files
 } // checkPaths
-
-function flattenArray (files) {
-  return [].concat(...files)
-}
 
 module.exports = readdirtree
