@@ -198,13 +198,13 @@ function checkPaths (rootPath, paths, index, prefix, found, callback) {
   })
 } // checkPaths
 ```
-And almost immediately, things get wild.  We can just loop through out paths, 
+And almost immediately, things get wild.  We can't just loop through our paths, 
 checking each one.  `fs.stat` provides us the information we
-need about each path, but it is another of our non-blocking methods that takes a 
+need about a path, but it is another of our non-blocking methods that takes a 
 callback. Consequently, we can't just fire off a for-loop, do a bit of work, and 
 be done. 
 
-Instead, we have to call `fs.stat` providing a local callback of our own. 
+Instead, we have to provide `fs.stat` with a local callback of our own. 
 ```javascript
   fs.stat(fullPath, (err, stats) => {
     if (err) {
@@ -219,7 +219,7 @@ on to check the next path in the list.
       found.push(localPath)
       next()
 ```
-The function `next`, defined as 
+`next`, defined as 
 ```javascript
   const next = () => checkPaths(rootPath, paths, index + 1, prefix, found, callback)
 ```
@@ -228,7 +228,7 @@ with the next path in the list (hence the `index + 1` in the parameter list).  T
 tail-recursion explains why `checkPaths` begins with a check to see if we've
 reached the end of the paths array.  
 
-In this kind of callback style programming, tail recursion is an extremely common way 
+In this kind of callback-style programming, tail recursion is an extremely common way 
 to loop over arrays and other data structures.  It is, perhaps predictably, a functional
 programming technique and almost ubiquitous in Lisp-like languages. (We could divert at
 this point into a sidebar discussion about whether JavaScript is Lisp-like, but 
@@ -245,7 +245,7 @@ receive the files it finds.
           callback(err)
         }
 ```
-When we're pass those files, assuming nothing went wrong, we can add them to our 
+When we're passed those files, assuming nothing went wrong, we can add them to our 
 `found` array, and then tail-recurse to check the next path.
 ```javascript
         found.push(...files)
@@ -253,8 +253,7 @@ When we're pass those files, assuming nothing went wrong, we can add them to our
       })
 ```
 If our call to `fs.readdir` gave us a path to anything else (socket, symlink, etc), 
-just skip over it.
-
+just skip over it and move on to our next path.
 ```javascript
     } else {
       next()
