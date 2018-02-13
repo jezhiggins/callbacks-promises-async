@@ -13,7 +13,7 @@ async function walktree (root, prefix) {
   return checkPaths(root, paths, prefix)
 } // walktree
 
-function checkPaths (rootPath, paths, prefix) {
+async function checkPaths (rootPath, paths, prefix) {
   const checks = paths.map(async path => {
     const fullPath = `${rootPath}/${path}`
     const localPath = `${prefix}${path}`
@@ -27,8 +27,8 @@ function checkPaths (rootPath, paths, prefix) {
     }
   })
 
-  return Promise.all(checks)
-      .then(files => flattenArray(files))
+  const files = await Promise.all(checks)
+  return flattenArray(files)
 } // checkPaths
 
 function flattenArray (files) {
