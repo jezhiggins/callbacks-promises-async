@@ -14,19 +14,17 @@ async function walktree (root, prefix) {
 } // walktree
 
 function checkPaths (rootPath, paths, prefix) {
-  const checks = paths.map(path => {
+  const checks = paths.map(async path => {
     const fullPath = `${rootPath}/${path}`
     const localPath = `${prefix}${path}`
 
-    return stat(fullPath)
-      .then(stats => {
-        if (stats.isFile()) {
-          return localPath
-        }
-        if (stats.isDirectory()) {
-          return walktree(fullPath, `${localPath}/`)
-        }
-      })
+    const stats = await stat(fullPath)
+    if (stats.isFile()) {
+      return localPath
+    }
+    if (stats.isDirectory()) {
+      return walktree(fullPath, `${localPath}/`)
+    }
   })
 
   return Promise.all(checks)
