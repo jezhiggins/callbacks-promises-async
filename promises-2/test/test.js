@@ -27,7 +27,7 @@ describe('using promises in implementation', () => {
   it('multiple levels deep', done => {
     readdirtree(`${fixtures}/multi-level`)
       .then(files => {
-        //expect(files.length).to.equal(13)
+        expect(files.length).to.equal(13)
         expect(files).to.eql([
           'a',
           'b/a',

@@ -10,7 +10,7 @@ function readdirtree (root) {
 
 function walktree (root, prefix) {
   return readdir(root)
-      .then(paths => checkPaths(root, paths, prefix))
+    .then(paths => checkPaths(root, paths, prefix))
 } // walktree
 
 function checkPaths (rootPath, paths, prefix) {
@@ -30,7 +30,7 @@ function checkPaths (rootPath, paths, prefix) {
   })
 
   return Promise.all(checks)
-      .then(files => flattenArray(files))
+    .then(files => flattenArray(files))
 } // checkPaths
 
 function flattenArray (files) {
