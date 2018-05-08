@@ -266,7 +266,7 @@ just skip over it and move on to our next path.
     }
 ```
 
-#### Clearer?
+#### So that's all clear then?
 
 I think it's pretty obvious that the callback-style and code clarity are not natural
 bedfellows. This code, even though it performs a simple task is really quite difficult
@@ -305,7 +305,7 @@ to something like
 ```javascript
 readdirtree('path/to/directory')
   .then(filelist => { /* do something with the list of files */ })
-  .else(err => { /* oh deary me! */ })
+  .catch(err => { /* oh deary me! */ })
 ```
 
 To my eye, this is immediately better code.  The happy path and the error case are
@@ -365,12 +365,16 @@ the last parameter to a function then it operates in a callback mode, otherwise
 it returns a Promise. I can see how this offers a migration path, and I've done
 it myself, but I'm not entirely sure how I feel about it for a long term thing.
 
-#### Heading Inside
+## All in with Promises
 
 With its external interface switched from callbacks to Promises, we can have a
-look at reworking `readdirtree`'s internals. The code relies on two library
+look at reworking `readdirtree`'s internals.
+
+#### Heading Inside
+
+`readdirtree` relies on two library
 functions `fs.readdir` and `fs.stat` and is shaped by their callback interfaces,
-ending up with convoluted logic and callbacks on callbacks. If we convert those
+ending up with convoluted logic and callbacks-on-callbacks. If we convert those
 functions to their Promise-returning equivalents, where do we end up?
 
 ```javascript
@@ -394,20 +398,24 @@ function checkPaths (rootPath, paths, prefix) {
     const fullPath = `${rootPath}/${path}`
     const localPath = `${prefix}${path}`
 
-    return stat(fullPath)
-      .then(stats => {
-        if (stats.isFile()) {
-          return localPath
-        }
-        if (stats.isDirectory()) {
-          return walktree(fullPath, `${localPath}/`)
-        }
-      })
+    return checkPath(fullPath, localPath)
   })
 
   return Promise.all(checks)
     .then(files => flattenArray(files))
 } // checkPaths
+
+function checkPath (fullPath, localPath) {
+  return stat(fullPath)
+    .then(stats => {
+      if (stats.isFile()) {
+        return localPath
+      }
+      if (stats.isDirectory()) {
+        return walktree(fullPath, `${localPath}/`)
+      }
+    })
+} // checkPath
 
 function flattenArray (files) {
   return [].concat(...files)
@@ -446,15 +454,7 @@ function checkPaths (rootPath, paths, prefix) {
     const fullPath = `${rootPath}/${path}`
     const localPath = `${prefix}${path}`
 
-    return stat(fullPath)
-      .then(stats => {
-        if (stats.isFile()) {
-          return localPath
-        }
-        if (stats.isDirectory()) {
-          return walktree(fullPath, `${localPath}/`)
-        }
-      })
+    return checkPath(fullPath, localPath)
   })
 
   return Promise.all(checks)
@@ -482,8 +482,46 @@ all those promises together, and resolves when they have all resolved. Here, tho
 promises give us list of files, which we combine together to give our complete
 file list.
 
-We can summarise as
+We can summarise `checkPaths` as
   * do something potentially time consuming to everything in an array
   * wait for them all to finish
   * do the next thing
 Try summarising our initial version of `checkPaths` in the same way.  It's tricky.
+
+So, what is the mysterious operation we're doing on each path?
+```javascript
+function checkPath (fullPath, localPath) {
+  return stat(fullPath)
+    .then(stats => {
+      if (stats.isFile()) {
+        return localPath
+      }
+      if (stats.isDirectory()) {
+        return walktree(fullPath, `${localPath}/`)
+      }
+    })
+} // checkPath
+```
+This all looks pretty clear - `stat` the path and if it's a file we want to
+keep it. If the path points to a directory, then head down into it to find
+its contents. If the path points to anything else, well, we don't even have to
+worry about it.
+
+#### Clearer?
+
+I think so, and I hope you do too. Walking down a directory is always going to
+involve a certain amount of recursion, but at least now we've only got it through
+`walktree` rather than through `walktree` and `checkPaths`.  Notice also that
+while we're using Promises throughout the code, we don't explicitly create any of
+them.
+
+Finally, consider also the error case. We don't have any explicit error handling
+either. Because we're working bottom to top with promises, any errors are
+propagated up and out for our calling to code to handle in its `catch` handler
+```javascript
+readdirtree('path/to/directory')
+  .then(filelist => { /* do something with the list of files */ })
+  .else(err => { /* oh deary me! */ })
+```
+
+
