@@ -165,7 +165,7 @@ function walktree (root, prefix, callback) {
 } // walktree
 ```
 `fs.readdir` provides the list of paths in the directory.  Once we have those
-paths we pass them to checkPaths to work out which is a file and which is a directory.
+paths we pass them to `checkPaths` to work out which is a file and which is a directory.
 
 ```javascript
 function checkPaths (rootPath, paths, index, prefix, found, callback) {
@@ -358,9 +358,132 @@ module.exports = (root) => {
 And that's it! Boom - `readdirtree` now returns a Promise, and no one would ever know
 that inside it's a horrible callbacky mess.
 
-We can, trivially, wrap any Node-style callback function to return with a Promise.
+We can, trivially, wrap any Node-style callback function with a Promise.
 In fact, this is so common there's a Node utility method called [`promisify`](https://nodejs.org/api/util.html#util_util_promisify_original) that does exactly
-that.
+that. Some Node libraries offer callbacks or Promises - if you pass a callback as
+the last parameter to a function then it operates in a callback mode, otherwise
+it returns a Promise. I can see how this offers a migration path, and I've done
+it myself, but I'm not entirely sure how I feel about it for a long term thing.
 
 #### Heading Inside
 
+With its external interface switched from callbacks to Promises, we can have a
+look at reworking `readdirtree`'s internals. The code relies on two library
+functions `fs.readdir` and `fs.stat` and is shaped by their callback interfaces,
+ending up with convoluted logic and callbacks on callbacks. If we convert those
+functions to their Promise-returning equivalents, where do we end up?
+
+```javascript
+const fs = require('fs')
+const promisify = require('util').promisify
+
+const readdir = promisify(fs.readdir)
+const stat = promisify(fs.stat)
+
+function readdirtree (root) {
+  return walktree(root, '')
+}
+
+function walktree (root, prefix) {
+  return readdir(root)
+    .then(paths => checkPaths(root, paths, prefix))
+} // walktree
+
+function checkPaths (rootPath, paths, prefix) {
+  const checks = paths.map(path => {
+    const fullPath = `${rootPath}/${path}`
+    const localPath = `${prefix}${path}`
+
+    return stat(fullPath)
+      .then(stats => {
+        if (stats.isFile()) {
+          return localPath
+        }
+        if (stats.isDirectory()) {
+          return walktree(fullPath, `${localPath}/`)
+        }
+      })
+  })
+
+  return Promise.all(checks)
+    .then(files => flattenArray(files))
+} // checkPaths
+
+function flattenArray (files) {
+  return [].concat(...files)
+}
+
+module.exports = readdirtree
+```
+
+#### Well ok, I guess?
+
+```javascript
+const fs = require('fs')
+const promisify = require('util').promisify
+
+const readdir = promisify(fs.readdir)
+const stat = promisify(fs.stat)
+
+function readdirtree (root) {
+  return walktree(root, '')
+}
+```
+As with out original implementation, ```readdirtree``` is our entry point function,
+and simply ses up the initial conditions for ```walktree```, where the real
+action starts
+```javascript
+function walktree (root, prefix) {
+  return readdir(root)
+    .then(paths => checkPaths(root, paths, prefix))
+} // walktree
+```
+`readdir`, our `promisify`ed version of `fs.readdir`, provides a list of paths in the directory which, as before, we had off to `checkPaths` to process.
+
+```javascript
+function checkPaths (rootPath, paths, prefix) {
+  const checks = paths.map(path => {
+    const fullPath = `${rootPath}/${path}`
+    const localPath = `${prefix}${path}`
+
+    return stat(fullPath)
+      .then(stats => {
+        if (stats.isFile()) {
+          return localPath
+        }
+        if (stats.isDirectory()) {
+          return walktree(fullPath, `${localPath}/`)
+        }
+      })
+  })
+
+  return Promise.all(checks)
+    .then(files => flattenArray(files))
+} // checkPaths
+```
+This is where the implementation really starts to diverge from our original
+implementation.  Then we had to do a crazy, hard to follow, tail recursion in
+order to make sure we processed each path correctly.  Here, promises allow
+us to side-step all that nonsense -
+```javascript
+  const checks = paths.map(path => {
+     ...
+  }
+```
+[`Array.map()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map) creates a new array containing the results of calling the provided function on every element of the calling array. So, for each path in our `paths` array we're going to
+perform some operation (the nature of which doesn't concern us at the moment),
+gathering those results into our new `checks` array.
+```javascript
+  return Promise.all(checks)
+    .then(files => flattenArray(files))
+```
+[`Promise.all`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/all) combines
+all those promises together, and resolves when they have all resolved. Here, those
+promises give us list of files, which we combine together to give our complete
+file list.
+
+We can summarise as
+  * do something potentially time consuming to everything in an array
+  * wait for them all to finish
+  * do the next thing
+Try summarising our initial version of `checkPaths` in the same way.  It's tricky.
